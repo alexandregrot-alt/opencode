@@ -182,6 +182,7 @@ describe("Agent", () => {
         "compaction",
         "explore",
         "general",
+        "review",
         "summary",
         "title",
       ])
@@ -214,6 +215,29 @@ describe("Agent", () => {
       for (const item of agents) {
         expect(item.permissions.some((rule) => rule.action === "bash" && rule.effect !== "deny")).toBe(false)
       }
+    }),
+  )
+
+  it.effect("keeps the review agent read-only while allowing it to inspect and run checks", () =>
+    Effect.gen(function* () {
+      const agent = yield* Agent.Service
+      yield* AgentPlugin.Plugin.effect(
+        host({
+          agent: agentHost(agent),
+        }),
+      )
+
+      const review = yield* agent.get(Agent.ID.make("review"))
+      if (!review) throw new Error("expected built-in agent: review")
+      expect(review.mode).toBe("all")
+      expect(review.hidden).toBe(false)
+      expect(review.system).toContain("code reviewer")
+      expect(Permission.evaluate("edit", "src/index.ts", review.permissions).effect).toBe("deny")
+      expect(Permission.evaluate("subagent", "*", review.permissions).effect).toBe("deny")
+      expect(Permission.evaluate("shell", "git diff origin/dev", review.permissions).effect).toBe("allow")
+      expect(Permission.evaluate("read", "src/index.ts", review.permissions).effect).toBe("allow")
+      expect(Permission.evaluate("read", ".env", review.permissions).effect).toBe("ask")
+      expect((yield* agent.select("review")).info?.id).toBe(review.id)
     }),
   )
 

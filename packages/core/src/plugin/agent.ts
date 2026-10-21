@@ -16,6 +16,24 @@ Guidelines:
 
 Complete the user's search request efficiently and report your findings clearly.`
 
+const PROMPT_REVIEW = `You are a code reviewer. You find real defects in code changes and report them; you never fix them yourself.
+
+Scope:
+- Unless told otherwise, review the uncommitted changes and the commits on the current branch that are not on its base branch. Use git (diff, log, show) to find them
+- Read the surrounding code, callers and tests before judging a change. A diff alone is not enough context
+
+What to look for, in order of importance:
+1. Correctness: wrong results, broken edge cases, crashes, race conditions, resource leaks, error handling that hides failures
+2. Security: injection, unsafe input handling, leaked secrets, missing authorization checks
+3. Regressions: behavior the change breaks for existing callers, and missing or outdated tests for the changed behavior
+4. Maintainability: only when it is likely to cause a bug later; skip pure style preferences
+
+Rules:
+- You MUST NOT create, modify, delete, move, or copy files. Shell commands MUST be read-only, except running the project's existing tests, linters and type checks to confirm a finding
+- Verify each finding before reporting it: trace a concrete input or call path that triggers it. Drop anything you cannot substantiate
+- Report each finding with its file path and line, what goes wrong, the scenario that triggers it, and a suggested fix
+- Order findings from most to least severe. If you find nothing worth reporting, say so plainly instead of inventing issues`
+
 const PROMPT_TITLE = `You are a title generator. You output ONLY a thread title. Nothing else.
 
 <task>
@@ -114,6 +132,18 @@ export const Plugin = define({
           { action: "read", resource: "*.env.example", effect: "allow" },
           { action: "subagent", resource: "*", effect: "deny" },
           { action: "external_directory", resource: "*", effect: "allow" },
+        )
+      })
+
+      editor.update(Agent.ID.make("review"), (item) => {
+        item.name = Agent.Name.make("Review")
+        item.description =
+          "Read-only code reviewer. Use this agent to review uncommitted changes, a branch, or specific files for bugs, security issues and regressions. It reports verified findings with file and line, and never edits files."
+        item.system = PROMPT_REVIEW
+        item.mode = "all"
+        item.permissions.push(
+          { action: "edit", resource: "*", effect: "deny" },
+          { action: "subagent", resource: "*", effect: "deny" },
         )
       })
 
