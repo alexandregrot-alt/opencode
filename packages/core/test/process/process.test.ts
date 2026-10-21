@@ -260,6 +260,21 @@ describe("AppProcess", () => {
       }),
     )
 
+    // A shell exits within a millisecond, before the input reaches it, so the pipe reports EPIPE; node starts too
+    // slowly to hit that race. Repeating the run makes it fail on every machine without the stdin error listener.
+    it.live.skipIf(process.platform === "win32")(
+      "reports the exit code when the child exits without reading stdin",
+      Effect.gen(function* () {
+        const svc = yield* AppProcess.Service
+        for (const stdin of ["a\0b\0", "x".repeat(70_000)]) {
+          for (let attempt = 0; attempt < 50; attempt++) {
+            const result = yield* svc.run(ChildProcess.make("sh", ["-c", "exit 3"]), { stdin })
+            expect(result.exitCode).toBe(3)
+          }
+        }
+      }),
+    )
+
     it.live(
       "completes correctly with empty input",
       Effect.gen(function* () {

@@ -229,6 +229,10 @@ const makeCrossSpawnSpawner = Effect.gen(function* () {
     Effect.suspend(() => {
       let sink: Sink.Sink<void, unknown, never, PlatformError.PlatformError> = Sink.drain
       if (Predicate.isNotNull(proc.stdin)) {
+        // A child can exit before reading its input, and the pipe then reports EPIPE, sometimes after the sink has
+        // ended and removed its own listener. Without a listener that error crashes the process; the exit code
+        // already reports what happened to the child.
+        proc.stdin.on("error", () => {})
         sink = NodeSink.fromWritable({
           evaluate: () => proc.stdin!,
           onError: (err) => toPlatformError("fromWritable(stdin)", toError(err), command),
