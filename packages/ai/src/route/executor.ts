@@ -9,13 +9,10 @@ import {
 } from "effect/http"
 import { HttpContext, HttpRateLimitDetails, AIError, TransportError } from "../schema/index.js"
 import { classifyProviderFailure, providerErrorMessage } from "../provider-error.js"
-import { Service, type HttpMiddleware, type Interface } from "./executor-service.js"
+import { headerDetails, responseHttp, Service, type HttpMiddleware, type Interface } from "./executor-service.js"
 
-export { Service } from "./executor-service.js"
+export { responseHttp, Service } from "./executor-service.js"
 export type { HttpHandler, HttpMiddleware, Interface } from "./executor-service.js"
-
-const headerDetails = (headers: Headers.Headers) =>
-  Object.fromEntries(Object.entries(headers).map(([name, value]) => [name, String(value)]))
 
 const normalizedHeaders = (headers: Headers.Headers) =>
   Object.fromEntries(Object.entries(headers).map(([key, value]) => [key.toLowerCase(), value]))
@@ -78,13 +75,6 @@ const rateLimitDetails = (headers: Record<string, string>, retryAfter: number | 
     reset: Object.keys(reset).length === 0 ? undefined : reset,
   })
 }
-
-export const responseHttp = (response: HttpClientResponse.HttpClientResponse) =>
-  new HttpContext({
-    url: response.request.url,
-    status: response.status,
-    headers: headerDetails(response.headers),
-  })
 
 const MAX_BODY_CHARS = 2000
 
