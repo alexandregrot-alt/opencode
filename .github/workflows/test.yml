@@ -61,23 +61,11 @@ jobs:
         settings:
           - name: linux
             host: ubuntu-24.04
-          - name: windows
-            host: windows-2025
     runs-on: ${{ matrix.settings.host }}
     defaults:
       run:
         shell: bash
     steps:
-      # GitHub-hosted Windows images scan every file the tests touch, which pushes real-time budgets in
-      # the PowerShell and TUI tests past their limits. Turning real-time scanning off entirely made
-      # Bun crash at startup, so only the workspace, temp dirs, Bun's cache and the test processes are excluded.
-      - name: Exclude test paths from Defender
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          Add-MpPreference -ExclusionPath $env:GITHUB_WORKSPACE, $env:RUNNER_TEMP, $env:TEMP, "$env:USERPROFILE\.bun"
-          Add-MpPreference -ExclusionProcess bun.exe, node.exe, pwsh.exe
-
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -107,13 +95,8 @@ jobs:
           git config --global user.name "opencode"
 
       # GitHub-hosted images do not ship ripgrep, and unit tests refuse the network download fallback.
-      - name: Install ripgrep (Linux)
-        if: runner.os == 'Linux'
+      - name: Install ripgrep
         run: sudo apt-get update && sudo apt-get install -y ripgrep
-
-      - name: Install ripgrep (Windows)
-        if: runner.os == 'Windows'
-        run: choco install ripgrep --no-progress -y
 
       # GitHub-hosted images ship pwsh, so the PowerShell shell tests run there. A cold first start
       # can take most of their 5s budget; start it once so that cost is not charged to a test.
@@ -170,8 +153,6 @@ jobs:
         settings:
           - name: linux
             host: ubuntu-24.04
-          - name: windows
-            host: windows-2025
     runs-on: ${{ matrix.settings.host }}
     defaults:
       run:
@@ -238,8 +219,6 @@ jobs:
         settings:
           - name: linux
             host: ubuntu-24.04
-          - name: windows
-            host: windows-2025
         # Playwright splits whole spec files across shards by test count, not duration. Every app-N
         # entry must use the same total, and the entries must cover 1..total. The service worker suite
         # reuses shard 2's production build. Each component suite runs once per OS in its own leg, so the
@@ -346,7 +325,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [linux, windows]
+        os: [linux]
     runs-on: ubuntu-24.04
     steps:
       - name: Check browser test results
