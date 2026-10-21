@@ -68,6 +68,16 @@ jobs:
       run:
         shell: bash
     steps:
+      # GitHub-hosted Windows images scan every file the tests touch, which pushes real-time budgets in
+      # the PowerShell and TUI tests past their limits. Turning real-time scanning off entirely made
+      # Bun crash at startup, so only the workspace, temp dirs, Bun's cache and the test processes are excluded.
+      - name: Exclude test paths from Defender
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Add-MpPreference -ExclusionPath $env:GITHUB_WORKSPACE, $env:RUNNER_TEMP, $env:TEMP, "$env:USERPROFILE\.bun"
+          Add-MpPreference -ExclusionProcess bun.exe, node.exe, pwsh.exe
+
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
