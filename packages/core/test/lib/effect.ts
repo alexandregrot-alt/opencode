@@ -65,6 +65,11 @@ const make = <R, E>(testLayer: Layer.Layer<R, E>, liveLayer: Layer.Layer<R, E>) 
   live.skip = <A, E2>(name: string, value: Body<A, E2, R | Scope.Scope>, opts?: number | TestOptions) =>
     test.skip(name, () => run(value, liveLayer), opts)
 
+  live.skipIf =
+    (condition: boolean) =>
+    <A, E2>(name: string, value: Body<A, E2, R | Scope.Scope>, opts?: number | TestOptions) =>
+      test.skipIf(condition)(name, () => run(value, liveLayer), opts)
+
   return { effect, live }
 }
 

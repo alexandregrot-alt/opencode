@@ -23,7 +23,7 @@ env:
 jobs:
   affected:
     name: affected packages
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     outputs:
       e2e: ${{ steps.packages.outputs.app }}
     steps:
@@ -60,9 +60,7 @@ jobs:
       matrix:
         settings:
           - name: linux
-            host: blacksmith-4vcpu-ubuntu-2404
-          - name: windows
-            host: blacksmith-4vcpu-windows-2025
+            host: ubuntu-24.04
     runs-on: ${{ matrix.settings.host }}
     defaults:
       run:
@@ -95,6 +93,15 @@ jobs:
         run: |
           git config --global user.email "bot@opencode.ai"
           git config --global user.name "opencode"
+
+      # GitHub-hosted images do not ship ripgrep, and unit tests refuse the network download fallback.
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      # GitHub-hosted images ship pwsh, so the PowerShell shell tests run there. A cold first start
+      # can take most of their 5s budget; start it once so that cost is not charged to a test.
+      - name: Warm up PowerShell
+        run: if command -v pwsh >/dev/null; then pwsh -NoLogo -NoProfile -NonInteractive -Command "exit 0"; fi
 
       - name: Run unit tests
         timeout-minutes: 20
@@ -145,9 +152,7 @@ jobs:
       matrix:
         settings:
           - name: linux
-            host: blacksmith-4vcpu-ubuntu-2404
-          - name: windows
-            host: blacksmith-4vcpu-windows-2025
+            host: ubuntu-24.04
     runs-on: ${{ matrix.settings.host }}
     defaults:
       run:
@@ -213,9 +218,7 @@ jobs:
       matrix:
         settings:
           - name: linux
-            host: blacksmith-4vcpu-ubuntu-2404
-          - name: windows
-            host: blacksmith-4vcpu-windows-2025
+            host: ubuntu-24.04
         # Playwright splits whole spec files across shards by test count, not duration. Every app-N
         # entry must use the same total, and the entries must cover 1..total. The service worker suite
         # reuses shard 2's production build. Each component suite runs once per OS in its own leg, so the
@@ -322,8 +325,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [linux, windows]
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+        os: [linux]
+    runs-on: ubuntu-24.04
     steps:
       - name: Check browser test results
         env:
