@@ -327,29 +327,31 @@ describe("util.flock", () => {
     expect(hit).toBe(true)
   })
 
-  test("fails clearly on unwritable lock roots", async () => {
-    if (process.platform === "win32") return
+  // Root ignores directory permissions, so the lock root stays writable.
+  test.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+    "fails clearly on unwritable lock roots",
+    async () => {
+      await using tmp = await tmpdir("flock-test-")
+      const dir = path.join(tmp.path, "locks")
+      const key = "flock:perm"
 
-    await using tmp = await tmpdir("flock-test-")
-    const dir = path.join(tmp.path, "locks")
-    const key = "flock:perm"
+      await fs.mkdir(dir, { recursive: true })
+      await fs.chmod(dir, 0o500)
 
-    await fs.mkdir(dir, { recursive: true })
-    await fs.chmod(dir, 0o500)
+      try {
+        const err = await Flock.withLock(key, async () => {}, {
+          dir,
+          staleMs: 100,
+          timeoutMs: 500,
+        }).catch((err) => err)
 
-    try {
-      const err = await Flock.withLock(key, async () => {}, {
-        dir,
-        staleMs: 100,
-        timeoutMs: 500,
-      }).catch((err) => err)
-
-      expect(err).toBeInstanceOf(Error)
-      if (!(err instanceof Error)) throw err
-      const text = err.message
-      expect(text.includes("EACCES") || text.includes("EPERM")).toBe(true)
-    } finally {
-      await fs.chmod(dir, 0o700)
-    }
-  })
+        expect(err).toBeInstanceOf(Error)
+        if (!(err instanceof Error)) throw err
+        const text = err.message
+        expect(text.includes("EACCES") || text.includes("EPERM")).toBe(true)
+      } finally {
+        await fs.chmod(dir, 0o700)
+      }
+    },
+  )
 })
