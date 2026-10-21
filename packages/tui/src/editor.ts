@@ -39,7 +39,7 @@ export async function openEditor(input: { value: string; renderer: CliRenderer; 
 }
 
 export function discoverEditorConnection(directory: string) {
-  const root = path.join(os.homedir(), ".claude", "ide")
+  const root = path.join(process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), ".claude"), "ide")
   const contains = (parent: string) => {
     const resolved = path.resolve(parent)
     const relative = path.relative(resolved, path.resolve(directory))
@@ -55,6 +55,8 @@ export function discoverEditorConnection(directory: string) {
         try {
           const value = JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>
           if (value.transport !== undefined && value.transport !== "ws") return []
+          // An IDE that exits without cleanup leaves its lock file behind; skip it instead of retrying a dead port.
+          if (typeof value.pid === "number" && !processAlive(value.pid)) return []
           const folders = Array.isArray(value.workspaceFolders)
             ? value.workspaceFolders.filter((item): item is string => typeof item === "string")
             : []
@@ -77,6 +79,16 @@ export function discoverEditorConnection(directory: string) {
       .map(({ url, authToken, source }) => ({ url, authToken, source }))[0]
   } catch {
     return undefined
+  }
+}
+
+function processAlive(pid: number) {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch (error) {
+    // EPERM means the process exists but belongs to another user.
+    return (error as NodeJS.ErrnoException).code === "EPERM"
   }
 }
 

@@ -2,7 +2,7 @@ import { onCleanup, onMount } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Option, Schema, SchemaGetter } from "effect"
 import { isRecord } from "../util/record"
-import { useTuiPaths } from "./runtime"
+import { useTuiApp, useTuiPaths } from "./runtime"
 import { createSimpleContext } from "./helper"
 import { editorIntegration } from "../editor"
 
@@ -113,6 +113,7 @@ export const { use: useEditorContext, provider: EditorContextProvider } = create
   name: "EditorContext",
   init: (props: { integration?: EditorIntegration; WebSocketImpl?: typeof WebSocket }) => {
     const paths = useTuiPaths()
+    const app = useTuiApp()
     const editor = props.integration ?? editorIntegration
     const value = process.env.CLAUDE_CODE_SSE_PORT || process.env.OPENCODE_EDITOR_SSE_PORT
     const parsedPort = value ? Number.parseInt(value, 10) : undefined
@@ -225,7 +226,7 @@ export const { use: useEditorContext, provider: EditorContextProvider } = create
         request("initialize", {
           protocolVersion: MCP_PROTOCOL_VERSION,
           capabilities: {},
-          clientInfo: { name: "opencode", version: "0.0.0" },
+          clientInfo: { name: "opencode", version: app.version },
         })
       })
 
