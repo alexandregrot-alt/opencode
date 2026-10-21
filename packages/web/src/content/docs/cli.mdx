@@ -608,6 +608,42 @@ opencode debug [command]
 
 ---
 
+#### agents
+
+List all agents.
+
+```bash
+opencode debug agents
+```
+
+---
+
+#### config
+
+List configuration sources.
+
+```bash
+opencode debug config
+```
+
+---
+
+#### paths
+
+Show global paths (data, config, cache, state).
+
+```bash
+opencode debug paths
+```
+
+Pass a name to print a single path: `db`, `home`, `data`, `config`, `cache`, `state`, `tmp`, `bin`, `log` or `repos`.
+
+```bash
+opencode debug paths db
+```
+
+---
+
 ### uninstall
 
 Uninstall OpenCode and remove all related files.
