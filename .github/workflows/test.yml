@@ -68,13 +68,6 @@ jobs:
       run:
         shell: bash
     steps:
-      # GitHub-hosted Windows images scan every file write and PowerShell script block, which made
-      # bun install take minutes and pushed the PowerShell oracle test past its 45s child timeout.
-      - name: Disable Defender real-time scanning
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: Set-MpPreference -DisableRealtimeMonitoring $true
-
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
