@@ -96,6 +96,15 @@ jobs:
           git config --global user.email "bot@opencode.ai"
           git config --global user.name "opencode"
 
+      # GitHub-hosted images do not ship ripgrep, and unit tests refuse the network download fallback.
+      - name: Install ripgrep (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Install ripgrep (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ripgrep --no-progress -y
+
       - name: Run unit tests
         timeout-minutes: 20
         run: |
