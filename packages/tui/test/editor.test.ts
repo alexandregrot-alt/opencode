@@ -1,15 +1,18 @@
 import { afterEach, expect, test } from "bun:test"
-import { writeFile } from "node:fs/promises"
+import { mkdir, writeFile } from "node:fs/promises"
 import path from "node:path"
-import { normalizePromptContent, openEditor } from "../src/editor"
+import { discoverEditorConnection, normalizePromptContent, openEditor } from "../src/editor"
 import { tmpdir } from "./fixture/fixture"
 
 const editor = process.env.EDITOR
 const visual = process.env.VISUAL
+const claudeConfigDir = process.env.CLAUDE_CONFIG_DIR
 
 afterEach(() => {
   process.env.EDITOR = editor
   process.env.VISUAL = visual
+  if (claudeConfigDir === undefined) delete process.env.CLAUDE_CONFIG_DIR
+  else process.env.CLAUDE_CONFIG_DIR = claudeConfigDir
 })
 
 function renderer(events: string[] = []) {
@@ -66,4 +69,38 @@ test("normalizes a single trailing editor newline for one-line prompts", () => {
 
 test("preserves multiline prompts that end with a newline", () => {
   expect(normalizePromptContent("hello\nworld\n")).toBe("hello\nworld\n")
+})
+
+test("discovers the IDE lock file under CLAUDE_CONFIG_DIR", async () => {
+  await using tmp = await tmpdir()
+  process.env.CLAUDE_CONFIG_DIR = tmp.path
+  await mkdir(path.join(tmp.path, "ide"))
+  await writeFile(
+    path.join(tmp.path, "ide", "4242.lock"),
+    JSON.stringify({ pid: process.pid, workspaceFolders: [tmp.path], transport: "ws", authToken: "secret" }),
+  )
+
+  expect(discoverEditorConnection(path.join(tmp.path, "src"))).toEqual({
+    url: "ws://127.0.0.1:4242",
+    authToken: "secret",
+    source: "lock:4242",
+  })
+})
+
+test("skips IDE lock files left behind by an exited process", async () => {
+  await using tmp = await tmpdir()
+  process.env.CLAUDE_CONFIG_DIR = tmp.path
+  const exited = Bun.spawn([process.execPath, "--version"], { stdout: "ignore" })
+  await exited.exited
+  await mkdir(path.join(tmp.path, "ide"))
+  await writeFile(
+    path.join(tmp.path, "ide", "4242.lock"),
+    JSON.stringify({ pid: exited.pid, workspaceFolders: [tmp.path], transport: "ws" }),
+  )
+  await writeFile(
+    path.join(tmp.path, "ide", "4343.lock"),
+    JSON.stringify({ pid: process.pid, workspaceFolders: [tmp.path], transport: "ws" }),
+  )
+
+  expect(discoverEditorConnection(tmp.path)?.source).toBe("lock:4343")
 })
