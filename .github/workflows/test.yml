@@ -105,6 +105,11 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install ripgrep --no-progress -y
 
+      # GitHub-hosted images ship pwsh, so the PowerShell shell tests run there. A cold first start
+      # can take most of their 5s budget; start it once so that cost is not charged to a test.
+      - name: Warm up PowerShell
+        run: if command -v pwsh >/dev/null; then pwsh -NoLogo -NoProfile -NonInteractive -Command "exit 0"; fi
+
       - name: Run unit tests
         timeout-minutes: 20
         run: |
