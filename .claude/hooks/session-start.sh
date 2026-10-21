@@ -31,6 +31,11 @@ if [ ! -f "$target/dist/ghostty-web.js" ]; then
   if [ -n "$patchfile" ]; then patch --quiet -p1 -d "$target" < "$patchfile"; fi
 fi
 
-# Fail the hook if anything other than ghostty-web is still missing.
-bun install --frozen-lockfile 2>&1 | grep -v "ghostty-web" | grep -E "^error:" && exit 1
+# Fail the hook if anything other than ghostty-web is still missing. Capture the errors
+# first: under pipefail, `bun install | grep && exit 1` never exits when bun install fails.
+errors=$(bun install --frozen-lockfile 2>&1 | grep -E "^error:" | grep -v "ghostty-web" || true)
+if [ -n "$errors" ]; then
+  echo "$errors" >&2
+  exit 1
+fi
 exit 0
