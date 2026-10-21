@@ -64,6 +64,18 @@ describe("CLI frontend import boundaries", () => {
     expect(mini).not.toContain("packages/tui/src/runtime.tsx")
   })
 
+  test("keeps the TUI renderer and the plugin TSX compiler off the startup path", async () => {
+    // Every command evaluates the entrypoint's static graph, including serve, run, and the background service.
+    const cli = await startupInputs("packages/cli/src/index.ts")
+    expect(cli).toContain("packages/cli/src/config/config.ts")
+    expect(cli.filter((file) => /\/(?:@opentui|solid-js)\//.test(file))).toEqual([])
+
+    // Only external TUI plugins need OpenTUI's Babel-based transform, so it loads on first use.
+    const tui = await startupInputs("packages/cli/src/commands/handlers/default.ts")
+    expect(tui).toContain("packages/tui/src/plugin/context.tsx")
+    expect(tui.filter((file) => file.includes("/@babel/"))).toEqual([])
+  })
+
   test("keeps TUI Mini independent from Core, Server, and CLI", async () => {
     const glob = new Bun.Glob("**/*.{ts,tsx}")
     const imports: string[] = []
@@ -80,6 +92,25 @@ describe("CLI frontend import boundaries", () => {
 })
 
 async function bundleInputs(entrypoint: string) {
+  return Object.keys(await bundleMetadata(entrypoint))
+}
+
+// Modules evaluated before the entrypoint itself runs: its closure over static imports.
+async function startupInputs(entrypoint: string) {
+  const inputs = await bundleMetadata(entrypoint)
+  const seen = new Set<string>()
+  const visit = (file: string) => {
+    if (seen.has(file)) return
+    seen.add(file)
+    inputs[file]?.imports
+      .filter((item) => item.kind === "import-statement")
+      .forEach((item) => visit(normalizeInput(item.path)))
+  }
+  visit(entrypoint)
+  return [...seen]
+}
+
+async function bundleMetadata(entrypoint: string) {
   const temporary = await mkdtemp(path.join(import.meta.dir, ".import-boundary-"))
   const metafile = path.join(temporary, "meta.json")
   try {
@@ -92,6 +123,10 @@ async function bundleInputs(entrypoint: string) {
         "--format=esm",
         "--packages=bundle",
         "--external=@opentui/core-*",
+        "--external=@opencode-ai/pty-*",
+        "--external=@parcel/watcher-*",
+        "--external=virtual:*",
+        "--external=node-gyp",
         `--metafile=${metafile}`,
         `--outdir=${path.join(temporary, "out")}`,
       ],
@@ -103,11 +138,15 @@ async function bundleInputs(entrypoint: string) {
       new Response(child.stderr).text(),
     ])
     if (exitCode !== 0) throw new Error(stdout + stderr)
-    const metadata = await Bun.file(metafile).json()
-    return Object.keys(metadata.inputs).map((input) =>
-      path.relative(root, path.resolve(root, input)).replaceAll(path.sep, "/"),
-    )
+    const metadata: {
+      inputs: Record<string, { imports: { path: string; kind: string }[] }>
+    } = await Bun.file(metafile).json()
+    return Object.fromEntries(Object.entries(metadata.inputs).map(([input, value]) => [normalizeInput(input), value]))
   } finally {
     await rm(temporary, { recursive: true, force: true })
   }
+}
+
+function normalizeInput(input: string) {
+  return path.relative(root, path.resolve(root, input)).replaceAll(path.sep, "/")
 }

@@ -1,6 +1,6 @@
 export * as ConfigMigration from "./migrate"
 
-import { TuiConfigV1 } from "@opencode/tui/config/v1"
+import { TuiConfigV1 } from "@opencode/tui/config/v1/schema"
 import { TuiKeybind } from "@opencode/tui/config/v1/keybind"
 import { Definitions } from "@opencode/tui/config/keybind"
 import { Effect, FileSystem, Option, Schema } from "effect"
