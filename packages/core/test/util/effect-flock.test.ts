@@ -287,10 +287,10 @@ describe("util.effect-flock", () => {
     }),
   )
 
-  it.live(
+  // Root ignores directory permissions, so the lock root stays writable.
+  it.live.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
     "fails on unwritable lock roots",
     Effect.gen(function* () {
-      if (process.platform === "win32") return
       const flock = yield* EffectFlock.Service
       const tmp = (yield* Effect.acquireDisposable(Effect.promise(() => tmpdir("eflock-test-")))).path
       const dir = path.join(tmp, "locks")

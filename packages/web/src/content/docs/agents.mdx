@@ -106,6 +106,16 @@ A fast, read-only agent for exploring codebases. Cannot modify files. Use this w
 
 ---
 
+### Use review
+
+_Mode_: `all`
+
+A read-only code reviewer. Select it with `Tab` or invoke it with `@review` to review uncommitted changes, a branch, or specific files. It reports verified bugs, security issues, and regressions with the file and line they occur on.
+
+It cannot modify files: edits, writes, and patches are refused without prompting. Shell commands follow your [permission](/docs/permissions) config, so it can use `git diff` and run the project's existing tests to confirm a finding.
+
+---
+
 ### Use scout
 
 _Mode_: `subagent`
