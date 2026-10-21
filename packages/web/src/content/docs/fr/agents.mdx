@@ -84,6 +84,16 @@ Un agent rapide en lecture seule pour explorer les bases de code. Impossible de 
 
 ---
 
+### Agent Review
+
+_Mode_ : `all`
+
+Un relecteur de code en lecture seule. Sélectionnez-le avec la touche `Tab` ou invoquez-le avec `@review` pour relire les modifications non commitées, une branche ou des fichiers précis. Il signale les bugs, problèmes de sécurité et régressions qu'il a vérifiés, avec le fichier et la ligne concernés.
+
+Il ne peut pas modifier les fichiers : les modifications, écritures et patchs sont refusés sans demande. Les commandes shell suivent votre configuration de [permissions](/docs/permissions), ce qui lui permet d'utiliser `git diff` et de lancer les tests existants pour confirmer un problème.
+
+---
+
 ### Agent Scout
 
 _Mode_ : `subagent`
