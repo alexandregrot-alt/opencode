@@ -1,4 +1,4 @@
-import { glob, globSync, type GlobOptions } from "glob"
+import type { GlobOptions } from "glob"
 import { minimatch } from "minimatch"
 
 export namespace Glob {
@@ -23,11 +23,9 @@ export namespace Glob {
   }
 
   export async function scan(pattern: string, options: Options = {}): Promise<string[]> {
+    // glob and its dependencies are slow to load, and almost every process imports this module.
+    const { glob } = await import("glob")
     return glob(pattern, toGlobOptions(options)) as Promise<string[]>
-  }
-
-  export function scanSync(pattern: string, options: Options = {}): string[] {
-    return globSync(pattern, toGlobOptions(options)) as string[]
   }
 
   export function match(pattern: string, filepath: string): boolean {
