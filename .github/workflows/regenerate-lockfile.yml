@@ -1,6 +1,6 @@
 # Temporary: regenerates bun.lock for the MCP 2.3.1 update and applies in-range security fixes.
 # The cloud session that made this branch cannot resolve ghostty-web from GitHub; Actions can.
-# Remove this file once the lockfile commit lands.
+# Remove this file once the lockfile commit lands. Edit this file to run it again.
 name: regenerate-lockfile
 
 on:
