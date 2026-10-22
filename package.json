@@ -83,7 +83,7 @@
       "fast-check": "4.9.0",
       "ai": "6.0.168",
       "cross-spawn": "7.0.6",
-      "hono": "4.13.7",
+      "hono": "4.13.11",
       "hono-openapi": "1.1.2",
       "fuzzysort": "3.1.0",
       "get-east-asian-width": "1.6.0",
