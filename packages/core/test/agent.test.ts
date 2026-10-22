@@ -237,7 +237,7 @@ describe("Agent", () => {
       expect(Permission.evaluate("shell", "git diff origin/dev", review.permissions).effect).toBe("allow")
       expect(Permission.evaluate("read", "src/index.ts", review.permissions).effect).toBe("allow")
       expect(Permission.evaluate("read", ".env", review.permissions).effect).toBe("ask")
-      expect((yield* agent.select("review")).info?.id).toBe(review.id)
+      expect((yield* agent.select(Agent.ID.make("review"))).info?.id).toBe(review.id)
     }),
   )
 
