@@ -1,4 +1,4 @@
-import { expect } from "bun:test"
+import { expect, test } from "bun:test"
 import fs from "node:fs/promises"
 import { createServer } from "node:http"
 import path from "node:path"
@@ -75,6 +75,20 @@ it.live("returns LocationNotFoundError for a missing folder and recovers once it
 
 type Handler = (request: Request) => Promise<Response>
 
+// Without IPv6, ::1 cannot be bound by anyone, so the IPv4 listener alone occupies the port.
+function missingFamily(host: string, error: Error) {
+  return host === "::1" && "code" in error && (error.code === "EAFNOSUPPORT" || error.code === "EADDRNOTAVAIL")
+}
+
+test("treats only an unavailable IPv6 loopback as a missing family", () => {
+  const failure = (code: string) => Object.assign(new Error(code), { code })
+  expect(missingFamily("::1", failure("EAFNOSUPPORT"))).toBe(true)
+  expect(missingFamily("::1", failure("EADDRNOTAVAIL"))).toBe(true)
+  expect(missingFamily("::1", failure("EADDRINUSE"))).toBe(false)
+  expect(missingFamily("::1", new Error("no code"))).toBe(false)
+  expect(missingFamily("127.0.0.1", failure("EAFNOSUPPORT"))).toBe(false)
+})
+
 function occupy(port: number, cancel = false) {
   return Effect.gen(function* () {
     const requests: string[] = []
@@ -94,16 +108,18 @@ function occupy(port: number, cancel = false) {
       }),
     }))
     yield* Effect.addFinalizer(() =>
-      Effect.forEach(servers, (item) =>
-        Effect.callback<void>((resume) => {
-          item.server.closeAllConnections()
-          item.server.close(() => resume(Effect.void))
-        }),
+      Effect.forEach(
+        servers.filter((item) => item.server.listening),
+        (item) =>
+          Effect.callback<void>((resume) => {
+            item.server.closeAllConnections()
+            item.server.close(() => resume(Effect.void))
+          }),
       ),
     )
     yield* Effect.forEach(servers, (item) =>
       Effect.callback<void, Error>((resume) => {
-        const onError = (error: Error) => resume(Effect.fail(error))
+        const onError = (error: Error) => resume(missingFamily(item.host, error) ? Effect.void : Effect.fail(error))
         item.server.once("error", onError)
         item.server.listen(port, item.host, () => {
           item.server.off("error", onError)
